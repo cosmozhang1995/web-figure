@@ -1,0 +1,27 @@
+{
+  "name": "web-figure",
+  "description": "A web component that creates MATLAB-liked figures",
+  "main": "index.js",
+  "authors": [
+    "Cosmo Zhang"
+  ],
+  "license": "ISC",
+  "keywords": [
+    "MATLAB"
+  ],
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "public/vender",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "^3.3.0"
+  },
+  "devDependencies": {
+    "bootstrap": "^4.0.0"
+  }
+}

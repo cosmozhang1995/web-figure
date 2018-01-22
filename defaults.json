@@ -1,0 +1,104 @@
+{
+  "color": {
+    "red": 0,
+    "green": 0,
+    "blue": 0,
+    "alpha": 1,
+    "color_scheme": {
+      "b": [0, 0.4470, 0.7410],
+      "n": [0.8500, 0.3250, 0.0980],
+      "y": [0.9290, 0.6940, 0.1250],
+      "p": [0.4940, 0.1840, 0.5560],
+      "g": [0.4660, 0.6740, 0.1880],
+      "s": [0.3010, 0.7450, 0.9330],
+      "r": [0.6350, 0.0780, 0.1840],
+      "k": [0, 0, 0],
+      "w": [1, 1, 1]
+    }
+  },
+  "font": {
+    "name": "Times New Roman",
+    "size": 10,
+    "weight": "normal",
+    "units": "points",
+    "italic": false,
+    "color": "k"
+  },
+  "text": {
+    "text": null,
+    "font": null
+  },
+  "figure": {
+    "subplots": []
+  },
+  "axes": {
+    "color": [1, 1, 1],
+    "box_on": false,
+    "box_style": "back",
+    "line_width": 0.5,
+    "xaxis": null,
+    "yaxis": null,
+    "zaxis": null,
+    "xaxis_location": "bottom",
+    "yaxis_location": "left",
+    "xticks": null,
+    "yticks": null,
+    "zticks": null,
+    "font": null,
+    "title": null,
+    "title_font": null,
+    "xlabel": null,
+    "xlabel_font": null,
+    "ylabel": null,
+    "ylabel_font": null,
+    "zlabel": null,
+    "zlabel_font": null,
+    "color_order": ["b", "n", "y", "p", "g", "s", "r"],
+    "outer_position": [0, 0, 1, 1],
+    "position": [0.1300, 0.1100, 0.7750, 0.8150],
+    "visible": true,
+    "units": "normalized",
+    "components": []
+  },
+  "axis": {
+    "color": [0.15, 0.15, 0.15],
+    "reversal": false,
+    "scale": "linear",
+    "lim": "auto"
+  },
+  "ticks": {
+    "ticks": "auto",
+    "labels": "auto",
+    "rotation": 0,
+    "length": [0.01, 0.025],
+    "dir": "in"
+  },
+  "grid": {
+    "style": "-",
+    "color": [0.15, 0.15, 0.15],
+    "layer": "bottom"
+  },
+  "component": {
+    "type": null,
+    "config": null
+  },
+  "line": {
+    "data": [],
+    "color": null,
+    "line_width": null,
+    "style": null
+  },
+  "image": {
+    "rows": 0,
+    "cols": 0,
+    "channels": 1,
+    "data": []
+  },
+  "shape": {
+    "data": [],
+    "color": null,
+    "face_color": [1, 1, 1, 1],
+    "line_width": null,
+    "style": null
+  }
+}
