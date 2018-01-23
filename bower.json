@@ -19,7 +19,8 @@
     "tests"
   ],
   "dependencies": {
-    "jquery": "^3.3.0"
+    "jquery": "^3.3.1",
+    "jquery.svg": "*"
   },
   "devDependencies": {
     "bootstrap": "^4.0.0"

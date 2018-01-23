@@ -13,7 +13,8 @@
       "s": [0.3010, 0.7450, 0.9330],
       "r": [0.6350, 0.0780, 0.1840],
       "k": [0, 0, 0],
-      "w": [1, 1, 1]
+      "w": [1, 1, 1],
+      "t": [0, 0, 0, 0]
     }
   },
   "font": {
@@ -44,6 +45,7 @@
     "xticks": null,
     "yticks": null,
     "zticks": null,
+    "grid": null,
     "font": null,
     "title": null,
     "title_font": null,
@@ -58,7 +60,9 @@
     "position": [0.1300, 0.1100, 0.7750, 0.8150],
     "visible": true,
     "units": "normalized",
-    "components": []
+    "components": [],
+    "viewport": null,
+    "default_viewport": [[0,0],[0,0]]
   },
   "axis": {
     "color": [0.15, 0.15, 0.15],
@@ -74,6 +78,7 @@
     "dir": "in"
   },
   "grid": {
+    "on": false,
     "style": "-",
     "color": [0.15, 0.15, 0.15],
     "layer": "bottom"
@@ -84,9 +89,9 @@
   },
   "line": {
     "data": [],
-    "color": null,
+    "color": "b",
     "line_width": null,
-    "style": null
+    "style": "-"
   },
   "image": {
     "rows": 0,
@@ -96,9 +101,9 @@
   },
   "shape": {
     "data": [],
-    "color": null,
+    "color": "b",
     "face_color": [1, 1, 1, 1],
     "line_width": null,
-    "style": null
+    "style": "-"
   }
 }

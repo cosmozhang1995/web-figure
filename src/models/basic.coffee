@@ -60,6 +60,16 @@ module.exports = (rootConfig) ->
         return chs[d1] + chs[d0]
       return "#" + norm2hex(this.red) + norm2hex(this.green) + norm2hex(this.blue)
 
+    cssrgba: () ->
+      norm2uint8 = (norm) ->
+        intval = Math.round(norm * 255)
+        if intval > 255
+          intval = 255
+        if intval < 0
+          intval = 0
+        return intval
+      return "rgba(" + norm2uint8(this.red) + norm2uint8(this.green) + norm2uint8(this.blue) + norm2uint8(this.alpha) + ")"
+
   class Font
     constructor: (arg) ->
       # Font(void)

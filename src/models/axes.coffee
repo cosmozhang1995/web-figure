@@ -1,6 +1,7 @@
 extend = require('../utils/utils').extend
 parse_matlab_named_arguments = require('../utils/utils').parse_matlab_named_arguments
 slice = require('../utils/utils').slice
+with_default = require('../utils/utils').with_default
 
 module.exports = (rootConfig) ->
   defaults = rootConfig.defaults
@@ -40,6 +41,8 @@ module.exports = (rootConfig) ->
       this.xticks = new Ticks(config.xticks)
       this.yticks = new Ticks(config.yticks)
       this.zticks = new Ticks(config.zticks)
+      # Grids
+      this.grid = new Grid(config.grid)
       # Font
       this.font = new Font(config.font)
       # Title and Label
@@ -57,6 +60,8 @@ module.exports = (rootConfig) ->
       this.units = config.units
       # Components
       this.components = ((new Component(c)).component for c in config.components)
+      # Viewports
+      this.viewport = with_default(config.viewport, config.default_viewport)
 
     next_color: () ->
       color = this.color_order[this._next_color_idx]
@@ -80,8 +85,20 @@ module.exports = (rootConfig) ->
       }
       config = extend({}, defaults.line, axes_default, named_args)
       line = new Line(config)
-      this.components.push(line)
+      this.components.push(new Component(line))
+      this.add_viewport(line.viewport())
       return this
+
+    add_viewport: (viewport) ->
+      if viewport == null || viewport == undefined
+        return
+      if this.viewport == null || this.viewport == undefined
+        this.viewport = ([rng[0], rng[1]] for rng in viewport)
+        return
+      for i in [0..Math.min(viewport.length, this.viewport.length)-1]
+        this.viewport[i][0] = Math.min(this.viewport[i][0], viewport[i][0])
+        this.viewport[i][1] = Math.max(this.viewport[i][1], viewport[i][1])
+      return
 
   class Axis
     constructor: (config) ->
@@ -105,20 +122,33 @@ module.exports = (rootConfig) ->
   class Grid
     constructor: (config) ->
       config = extend({}, defaults.grid, config)
+      this.on = config.on
       this.style = config.style
       this.color = new Color(config.color)
       this.layer = config.layer
 
   class Component
-    constructor: (config) ->
-      config = extend({}, defaults.component, config)
-      this.type = config.type
-      if this.type == "line"
-        this.component = new Line(config.config)
-      else if this.type == "image"
-        this.component = new Image(config.config)
-      else if this.type == "shape"
-        this.component = new Shape(config.config)
+    constructor: (arg) ->
+      if arg instanceof Line
+        this.type = "line"
+        this.component = arg
+      else if arg instanceof Image
+        this.type = "image"
+        this.component = arg
+      else if arg instanceof Shape
+        this.type = "shape"
+        this.component = arg
+      else
+        config = extend({}, defaults.component, config)
+        this.type = config.type
+        if this.type == "line"
+          this.component = new Line(config.config)
+        else if this.type == "image"
+          this.component = new Image(config.config)
+        else if this.type == "shape"
+          this.component = new Shape(config.config)
+    viewport: () ->
+      return this.component.viewport()
 
   class Line
     constructor: (config) ->
@@ -127,6 +157,16 @@ module.exports = (rootConfig) ->
       this.line_width = config.line_width
       this.color = new Color(config.color)
       this.style = config.style
+    viewport: () ->
+      if this.data.length == 0
+        return null
+      ndims = this.data[0].length
+      viewport = ([this.data[0][c], this.data[0][c]] for c in [0..ndims-1])
+      for point in this.data
+        for c in [0..ndims-1]
+          viewport[c][0] = Math.min(viewport[c][0], point[c])
+          viewport[c][1] = Math.max(viewport[c][1], point[c])
+      return viewport
 
   class Image
     constructor: (config) ->

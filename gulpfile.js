@@ -48,6 +48,7 @@ gulp.task('default_config', function() {
 
 gulp.task('watch', function() {
   gulp.watch('public/scss/**/*.scss', ['sass']);
-  gulp.watch('public/coffeescripts/**/*.coffee', ['script', 'dist']);
+  gulp.watch('public/coffeescripts/**/*.coffee', ['script']);
+  gulp.watch('src/**/*.coffee', ['dist']);
   gulp.watch('defaults.json', ['default_config']);
 });
