@@ -58,9 +58,11 @@ module.exports = (rootConfig) ->
       this.position = config.position
       this.visible = config.visible
       this.units = config.units
+      # Viewports
+      this.viewport = with_default(config.viewport, config.default_viewport)
       # Components
       this.components = ((new Component(c)).component for c in config.components)
-      # Viewports
+      # If viewport not set, set to default
       this.viewport = with_default(config.viewport, config.default_viewport)
 
     next_color: () ->
@@ -79,7 +81,7 @@ module.exports = (rootConfig) ->
         xdata = arguments[0]
       named_args = if arguments.length > 2 then parse_matlab_named_arguments(slice(arguments,2)) else {}
       axes_default = {
-        data: [[xdata[i], ydata[i]] for i in [0..xdata.length-1]]
+        data: ([xdata[i], ydata[i]] for i in [0..xdata.length-1])
         color: this.next_color()
         line_width: this.line_width
       }

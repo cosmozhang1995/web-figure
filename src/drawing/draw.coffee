@@ -43,12 +43,14 @@ autoticks = (range, pxrange) ->
   if dis == 0
     return []
   intv = dis / n
+  aintv = Math.abs(intv)
   unit = 1
-  while intv / unit >= 10
+  while aintv / unit >= 10
     unit = unit * 10
-  while intv / unit <= 0.1
+  while aintv / unit <= 0.1
     unit = unit * 0.1
-  intv = Math.floor(intv / unit) * unit
+  aintv = Math.floor(aintv / unit) * unit
+  intv = if intv > 0 then aintv else -aintv
   tval = Math.ceil(range[0] / unit) * unit
   ticks = [tval]
   while (tval = tval + unit) < range[1]
@@ -140,7 +142,6 @@ class AxesFrame
 
   createView: () ->
     figinfo = this.figinfo()
-    console.log(figinfo)
     this.outpos = any2px(this.axes.outer_position, this.axes.units, figinfo)
     this.pos = any2px(this.axes.position, this.axes.units, figinfo)
     this.boxleft = this.pos[0] - this.outpos[0]
@@ -158,14 +159,22 @@ class AxesFrame
       .css("width", this.outpos[2])
       .css("height", this.outpos[3])
       .css("z-stack", 0)
+    this.topLayer = $("<div></div>").appendTo(this.root)
+      .css("width", this.outwidth)
+      .css("height", this.outheight)
+      .css("position", "absolute")
+      .css("left", 0)
+      .css("top", 0)
+      .css("z-stack", 50)
     this.axesLayer = null
     this.compLayer = null
     this.gridLayer = null
+    that = this
     allLoaded = () ->
-      if this.axesLayer and this.compLayer and this.gridLayer
-        # this.createAxes()
-        # this.createComponents()
-    $("<div></div>")
+      if that.axesLayer and that.compLayer and that.gridLayer
+        that.createAxes()
+        # that.createComponents()
+    $("<div></div>").appendTo(this.root)
       .css("width", this.outwidth)
       .css("height", this.outheight)
       .css("position", "absolute")
@@ -174,14 +183,14 @@ class AxesFrame
       .css("z-stack", 0)
       .svg({
         onLoad: (svg) ->
-          this.axesLayer = svg
+          that.axesLayer = svg
           allLoaded()
         settings: {
-          width: this.outwidth
-          height: this.outheight
+          width: that.outwidth
+          height: that.outheight
         }
       })
-    $("<div></div>")
+    $("<div></div>").appendTo(this.root)
       .css("width", this.pos[2])
       .css("height", this.pos[3])
       .css("position", "absolute")
@@ -190,14 +199,14 @@ class AxesFrame
       .css("z-stack", 0)
       .svg({
         onLoad: (svg) ->
-          this.axesLayer = svg
+          that.compLayer = svg
           allLoaded()
         settings: {
-          width: this.pos[2]
-          height: this.pos[3]
+          width: that.pos[2]
+          height: that.pos[3]
         }
       })
-    $("<div></div>")
+    $("<div></div>").appendTo(this.root)
       .css("width", this.outwidth)
       .css("height", this.outheight)
       .css("position", "absolute")
@@ -206,77 +215,49 @@ class AxesFrame
       .css("z-stack", 0)
       .svg({
         onLoad: (svg) ->
-          this.axesLayer = svg
+          that.gridLayer = svg
           allLoaded()
         settings: {
-          width: this.outwidth
-          height: this.outheight
+          width: that.outwidth
+          height: that.outheight
         }
       })
-    # this.axesLayer = createSVG().appendTo(this.root)
-    #   .attr("width", this.outwidth)
-    #   .attr("height", this.outheight)
-    #   .css("width", this.outwidth)
-    #   .css("height", this.outheight)
-    #   .css("position", "absolute")
-    #   .css("left", 0)
-    #   .css("top", 0)
-    #   .css("z-stack", 0)
-    # this.compLayer = createSVG().appendTo(this.root)
-    #   .attr("width", this.pos[2])
-    #   .attr("height", this.pos[3])
-    #   .css("width", this.pos[2])
-    #   .css("height", this.pos[3])
-    #   .css("position", "absolute")
-    #   .css("left", this.boxleft)
-    #   .css("top", this.boxtop)
-    #   .css("z-stack", 20)
-    # this.gridLayer = createSVG().appendTo(this.root)
-    #   .attr("width", this.outwidth)
-    #   .attr("height", this.outheight)
-    #   .css("width", this.outwidth)
-    #   .css("height", this.outheight)
-    #   .css("position", "absolute")
-    #   .css("left", 0)
-    #   .css("top", 0)
-    #   .css("z-stack", if this.axes.grid.layer == "top" then 30 else 10)
-    this.topLayer = $("<div></div>").appendTo(this.root)
-      .css("width", this.outwidth)
-      .css("height", this.outheight)
-      .css("position", "absolute")
-      .css("left", 0)
-      .css("top", 0)
-      .css("z-stack", 50)
-    # this.axesLayer.on "load", () ->
-    #   this.createAxes()
-    # this.compLayer.on "load", () ->
-    #   this.createComponents()
 
   createAxes: () ->
-    this.root.find(".axis-tick, .axis-tick-label, .axis-line").remove()
+    this.topLayer.find(".axis-tick-label").remove()
+    if this.xaxisline then this.axesLayer.remove(this.xaxisline)
+    if this.yaxisline then this.axesLayer.remove(this.yaxisline)
+    this.axesLayer.remove(el) for el in (this.axesTicks || [])
+    this.axesLayer.remove(el) for el in (this.axesTickLabels || [])
     this.xaxistop = this.axes.xaxis_location == "top"
     this.yaxisleft = this.axes.xaxis_location != "right"
     this.xaxisposy = if this.xaxistop then this.boxtop else this.boxbottom
     this.yaxisposx = if this.yaxisleft then this.boxleft else this.boxright
-    $('<line></line>').appendTo(this.axesLayer)
-      .addClass('axis-line')
-      .attr('x0', this.boxleft)
-      .attr('y0', this.xaxisposy)
-      .attr('x1', this.boxright)
-      .attr('y1', this.xaxisposy)
-      .attr('stroke', "black")
-      .attr('stroke-width', this.axes.line_width)
-    $('<line></line>').appendTo(this.axesLayer)
-      .addClass('axis-line')
-      .attr('x0', this.yaxisposx)
-      .attr('y0', this.boxtop)
-      .attr('x1', this.yaxisposx)
-      .attr('y1', this.boxbottom)
-      .attr('stroke', "black")
-      .attr('stroke-width', this.axes.line_width)
+    this.xaxisline = this.axesLayer.line(null,
+      this.boxleft,
+      this.xaxisposy,
+      this.boxright,
+      this.xaxisposy, {
+        'stroke': "black"
+        'stroke-width': this.axes.line_width
+      })
+    this.yaxisline = this.axesLayer.line(null,
+      this.yaxisposx,
+      this.boxtop,
+      this.yaxisposx,
+      this.boxbottom, {
+        'stroke': "black"
+        'stroke-width': this.axes.line_width
+      })
+    this.axesTicks = []
+    this.axesTickLabels = []
+    this.updateAxes()
 
   updateAxes: () ->
-    this.root.find('.axis-tick, .axis-tick-label').remove()
+    this.topLayer.find('.axis-tick-label').remove()
+    # Axis lines
+    this.axesLayer.remove(el) for el in (this.axesTicks || [])
+    this.axesLayer.remove(el) for el in (this.axesTickLabels || [])
     # X ticks
     ticks = this.axes.xticks
     tickvals = ticks.ticks
@@ -298,15 +279,16 @@ class AxesFrame
     else
       ticky = [this.xaxisposy, this.xaxisposy + sign * ticklen]
     for i in [0..tickvals.length-1]
-      $("<line></line>").appendTo(this.axesLayer)
-        .addClass('axis-line')
-        .attr('x0', tickposes[i])
-        .attr('y0', ticky[0])
-        .attr('x1', tickposes[i])
-        .attr('y1', ticky[1])
-        .attr('stroke', "black")
-        .attr('stroke-width', this.axes.line_width)
+      this.axesTicks.push this.axesLayer.line(null
+        tickposes[i],
+        ticky[0],
+        tickposes[i],
+        ticky[1], {
+          "stroke": "black"
+          "stroke-width": this.axes.line_width
+        })
       createTextArea({ text: ticklabels.text, font: this.font }, if this.xaxistop then "centerbottom" else "centertop").appendTo(this.topLayer)
+        .addClass('axis-tick-label')
         .css('top', this.xaxisposy - sign * ticklen * 2)
         .css('left', tickposes[i])
     # Y ticks
@@ -330,14 +312,14 @@ class AxesFrame
     else
       tickx = [this.yaxisposx, this.yaxisposx + sign * ticklen]
     for i in [0..tickvals.length-1]
-      $("<line></line>").appendTo(this.axesLayer)
-        .addClass('axis-tick')
-        .attr('x0', tickx[0])
-        .attr('y0', tickposes[i])
-        .attr('x1', tickx[1])
-        .attr('y1', tickposes[i])
-        .attr('stroke', "black")
-        .attr('stroke-width', this.axes.line_width)
+      this.axesTicks.push this.axesLayer.line(null
+        tickx[0],
+        tickposes[i],
+        tickx[1],
+        tickposes[i], {
+          "stroke": "black"
+          "stroke-width": this.axes.line_width
+        })
       createTextArea({ text: ticklabels.text, font: this.font }, if this.yaxisleft then "rightcenter" else "leftcenter").appendTo(this.topLayer)
         .addClass('axis-tick-label')
         .css('top', tickposes[i])
