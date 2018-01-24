@@ -59,11 +59,13 @@ module.exports = (rootConfig) ->
       this.visible = config.visible
       this.units = config.units
       # Viewports
-      this.viewport = with_default(config.viewport, config.default_viewport)
+      this.viewport = config.viewport
+      this.default_viewport = config.default_viewport
       # Components
       this.components = ((new Component(c)).component for c in config.components)
-      # If viewport not set, set to default
-      this.viewport = with_default(config.viewport, config.default_viewport)
+
+    get_viewport: () ->
+      return with_default(this.viewport, this.default_viewport)
 
     next_color: () ->
       color = this.color_order[this._next_color_idx]
