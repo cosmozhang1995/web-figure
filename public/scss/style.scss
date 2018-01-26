@@ -3,7 +3,8 @@
   height: 500px;
 }
 
-.figctrl {
+.figctrl,
+.figdatactrl {
   display: inline-block;
   font-size: 0;
   vertical-align: top;
@@ -11,7 +12,8 @@
   border-radius: 4px;
   border: 1px #666 solid;
   margin-left: 30px;
-  .figctrl-item {
+  .figctrl-item,
+  .figdatactrl-item {
     display: inline-block;
     font-size: 16px;
     line-height: 32px;
