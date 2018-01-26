@@ -98,7 +98,18 @@ val2px = (val, range, pxrange, reversed) ->
 
 format_tickvals = (tickvals) ->
   scis = (toscinum(n) for n in tickvals)
-  index = min((s.index for s in scis))
+  indexes = (s.index for s in scis when s.num != 0)
+  minmaxindex = minmax(indexes)
+  minindex = minmaxindex[0]
+  maxindex = minmaxindex[1]
+  if Math.abs(minindex) < 3 and Math.abs(maxindex) < 3
+    index = 0
+  else if minindex >= 0
+    index = Math.max(maxindex - 2, minindex)
+  else if maxindex <= 0
+    index = Math.min(minindex + 2, maxindex)
+  else
+    index = 0
   unit = Math.pow(10, index)
   nums = ((n/unit) for n in tickvals)
   return {
@@ -165,12 +176,17 @@ createSVG = () ->
   return el
 
 
+click_interval_threshold = 200
+
+
 class FigureFrame
   constructor: (sel, figure) ->
     this.givenRoot = $(sel)
     this.figure = figure
+    this.axes_frames = []
   createView: () ->
     this.givenRoot.children().remove()
+    this.axes_frames = []
     this.root = $("<div></div>").appendTo(this.givenRoot)
       .css("position", "relative")
       .css("height", "100%")
@@ -178,6 +194,17 @@ class FigureFrame
     for axes in this.figure.subplots
       axes_frame = new AxesFrame(this, axes)
       axes_frame.createView()
+      this.axes_frames.push(axes_frame)
+
+  setAxesProperties: (name, val) ->
+    for axes_frame in this.axes_frames
+      axes_frame[name] = val
+  setMouseMode: (mode) ->
+    for axes_frame in this.axes_frames
+      axes_frame.setMouseMode(mode)
+  setViewport: (viewport) ->
+    for axes_frame in this.axes_frames
+      axes_frame.setViewport(viewport)
 
 class AxesFrame
   constructor: (infig, axes) ->
@@ -197,7 +224,6 @@ class AxesFrame
     this.updateAxes()
 
   createView: () ->
-    console.log "createView"
     figinfo = this.figinfo()
     this.outpos = any2px(this.axes.outer_position, this.axes.units, figinfo)
     this.pos = any2px(this.axes.position, this.axes.units, figinfo)
@@ -215,14 +241,16 @@ class AxesFrame
       .css("top", this.outpos[1])
       .css("width", this.outpos[2])
       .css("height", this.outpos[3])
-      .css("z-stack", 0)
+      .css("user-select", "none")
+      .css("z-index", 0)
     this.axesLayer = null
     this.compLayer = null
     this.gridLayer = null
+    this.coorlineLayer = null
     this.topLayer = null
     that = this
     allLoaded = () ->
-      if that.axesLayer and that.compLayer and that.gridLayer and that.topLayer
+      if that.axesLayer and that.compLayer and that.gridLayer and that.coorlineLayer and that.topLayer
         that.createAxes()
         that.createComponents()
     $("<div></div>").appendTo(this.root)
@@ -231,7 +259,7 @@ class AxesFrame
       .css("position", "absolute")
       .css("left", 0)
       .css("top", 0)
-      .css("z-stack", 0)
+      .css("z-index", 40)
       .svg({
         onLoad: (svg) ->
           that.axesLayer = svg
@@ -247,7 +275,7 @@ class AxesFrame
       .css("position", "absolute")
       .css("left", this.boxleft)
       .css("top", this.boxtop)
-      .css("z-stack", 0)
+      .css("z-index", 0)
       .svg({
         onLoad: (svg) ->
           that.compLayer = svg
@@ -263,10 +291,26 @@ class AxesFrame
       .css("position", "absolute")
       .css("left", 0)
       .css("top", 0)
-      .css("z-stack", 0)
+      .css("z-index", 0)
       .svg({
         onLoad: (svg) ->
           that.gridLayer = svg
+          allLoaded()
+        settings: {
+          width: that.outwidth
+          height: that.outheight
+        }
+      })
+    $("<div></div>").appendTo(this.root)
+      .css("width", this.outwidth)
+      .css("height", this.outheight)
+      .css("position", "absolute")
+      .css("left", 0)
+      .css("top", 0)
+      .css("z-index", 0)
+      .svg({
+        onLoad: (svg) ->
+          that.coorlineLayer = svg
           allLoaded()
         settings: {
           width: that.outwidth
@@ -279,8 +323,18 @@ class AxesFrame
       .css("position", "absolute")
       .css("left", 0)
       .css("top", 0)
-      .css("z-stack", 50)
+      .css("z-index", 90)
     allLoaded()
+    # Mouse event
+    this.mouseDown = false
+    this.root.on("mousedown", (event) -> that.onMouseDown(event))
+    this.root.on("mouseup", (event) -> that.onMouseUp(event))
+    this.root.on("mouseenter", (event) -> that.onMouseEnter(event))
+    this.root.on("mouseleave", (event) -> that.onMouseLeave(event))
+    this.root.on("mousemove", (event) -> that.onMouseMove(event))
+    # Mouse event modes
+    this.mouseMode = null
+    this.showMouseCoor = false
 
   createAxes: () ->
     this.topLayer.find(".axis-tick-label").remove()
@@ -335,7 +389,7 @@ class AxesFrame
       tickexp = sciticks.exp
       if tickexp == 0 then tickexp = null
       ticknums = sciticks.nums
-      ticklabels = (format_number(t, 1) for t in ticknums)
+      ticklabels = (format_number(t, 3) for t in ticknums)
     sign = if this.xaxistop then 1 else -1
     ticklen = normlen2pxlen(ticks.length[0], [this.boxleft, this.boxright])
     if ticks.dir == "both"
@@ -345,26 +399,27 @@ class AxesFrame
     else
       ticky = [this.xaxisposy, this.xaxisposy + sign * ticklen]
     maxheight = 0
-    for i in [0..tickvals.length-1]
-      this.axesTicks.push this.axesLayer.line(null,
-        tickposes[i],
-        ticky[0],
-        tickposes[i],
-        ticky[1], {
-          "stroke": "black"
-          "stroke-width": this.axes.line_width
-        })
-      textarea = createTextArea({ text: ticklabels[i], font: this.axes.font }, if this.xaxistop then "centerbottom" else "centertop").appendTo(this.topLayer)
-        .addClass('axis-tick-label')
-        .css('top', this.xaxisposy - sign * ticklen * 2)
-        .css('left', tickposes[i])
-      height = textarea.height()
-      if maxheight < height then maxheight = height
-    unless tickexp == null
-      createTextArea({ text: "10e" + tickexp, font: this.axes.font }, if this.xaxistop then "centerbottom" else "centertop").appendTo(this.topLayer)
-        .addClass('axis-tick-label')
-        .css('top', this.xaxisposy - sign * (ticklen * 2 + maxheight + ticklen * 2))
-        .css('left', tickposes[i-1])
+    if tickvals.length > 0
+      for i in [0..tickvals.length-1]
+        this.axesTicks.push this.axesLayer.line(null,
+          tickposes[i],
+          ticky[0],
+          tickposes[i],
+          ticky[1], {
+            "stroke": "black"
+            "stroke-width": this.axes.line_width
+          })
+        textarea = createTextArea({ text: ticklabels[i], font: this.axes.font }, if this.xaxistop then "centerbottom" else "centertop").appendTo(this.topLayer)
+          .addClass('axis-tick-label')
+          .css('top', this.xaxisposy - sign * ticklen * 2)
+          .css('left', tickposes[i])
+        height = textarea.height()
+        if maxheight < height then maxheight = height
+      unless tickexp == null
+        createTextArea({ text: "10e" + tickexp, font: this.axes.font }, if this.xaxistop then "centerbottom" else "centertop").appendTo(this.topLayer)
+          .addClass('axis-tick-label')
+          .css('top', this.xaxisposy - sign * (ticklen * 2 + maxheight + ticklen * 2))
+          .css('left', tickposes[i-1])
     # Y ticks
     ticks = this.axes.yticks
     tickvals = ticks.ticks
@@ -381,7 +436,7 @@ class AxesFrame
       tickexp = sciticks.exp
       if tickexp == 0 then tickexp = null
       ticknums = sciticks.nums
-      ticklabels = (format_number(t, 1) for t in ticknums)
+      ticklabels = (format_number(t, 3) for t in ticknums)
     sign = if this.yaxisleft then 1 else -1
     ticklen = normlen2pxlen(ticks.length[0], [this.boxtop, this.boxbottom])
     if ticks.dir == "both"
@@ -391,44 +446,267 @@ class AxesFrame
     else
       tickx = [this.yaxisposx, this.yaxisposx + sign * ticklen]
     maxwidth = 0
-    for i in [0..tickvals.length-1]
-      this.axesTicks.push this.axesLayer.line(null,
-        tickx[0],
-        tickposes[i],
-        tickx[1],
-        tickposes[i], {
-          "stroke": "black"
-          "stroke-width": this.axes.line_width
-        })
-      createTextArea({ text: ticklabels[i], font: this.axes.font }, if this.yaxisleft then "rightcenter" else "leftcenter").appendTo(this.topLayer)
-        .addClass('axis-tick-label')
-        .css('top', tickposes[i])
-        .css('left', this.yaxisposx - sign * ticklen * 2)
-      width = textarea.width()
-      if maxwidth < width then maxwidth = width
-    unless tickexp == null
-      createTextArea({ text: "10e" + tickexp, font: this.axes.font }, if this.yaxisleft then "rightcenter" else "leftcenter").appendTo(this.topLayer)
-        .addClass('axis-tick-label')
-        .css('top', tickposes[i-1])
-        .css('left', this.yaxisposx - sign * (ticklen * 2 + maxwidth + ticklen * 2))
+    if tickvals.length > 0
+      for i in [0..tickvals.length-1]
+        this.axesTicks.push this.axesLayer.line(null,
+          tickx[0],
+          tickposes[i],
+          tickx[1],
+          tickposes[i], {
+            "stroke": "black"
+            "stroke-width": this.axes.line_width
+          })
+        textarea = createTextArea({ text: ticklabels[i], font: this.axes.font }, if this.yaxisleft then "rightcenter" else "leftcenter").appendTo(this.topLayer)
+          .addClass('axis-tick-label')
+          .css('top', tickposes[i])
+          .css('left', this.yaxisposx - sign * ticklen * 2)
+        width = textarea.width()
+        if maxwidth < width then maxwidth = width
+      unless tickexp == null
+        createTextArea({ text: "10e" + tickexp, font: this.axes.font }, if this.yaxisleft then "rightcenter" else "leftcenter").appendTo(this.topLayer)
+          .addClass('axis-tick-label')
+          .css('top', tickposes[i-1])
+          .css('left', this.yaxisposx - sign * (ticklen * 2 + maxwidth + ticklen * 2))
 
   createComponents: () ->
     this.compLayer.remove(el) for el in (this.componentEls || [])
     this.componentEls = []
+    this.componentPoints = []
     for comp in this.axes.components
       if comp.type == "line"
         this.drawLine(comp.component)
 
   drawLine: (line) ->
     data = line.data
-    pxpoints = ([val2px(p[0], this.viewport[0], [0, this.boxwidth], this.axes.xaxis.reversal), val2px(p[1], this.viewport[1], [0, this.boxheight], not this.axes.yaxis.reversal)] for p in line.data)
+    that = this
+    make_pxpoint = (p) ->
+      arr = [val2px(p[0], that.viewport[0], [0, that.boxwidth], that.axes.xaxis.reversal), val2px(p[1], that.viewport[1], [0, that.boxheight], not that.axes.yaxis.reversal)]
+      arr.point = p
+      return arr
+    pxpoints = (make_pxpoint(p) for p in line.data)
     linewidth = with_default(with_default(line.line_width, this.axes.line_width), 1)
     styles = {}
     styles["stroke"] = line.color.csscolor()
     styles["stroke-width"] = linewidth
     styles["stroke-dasharray"] = linestyle2dasharray(line.style, linewidth)
     styles["fill"] = "none"
-    this.componentEls.push this.compLayer.polyline(null, pxpoints, styles)
+    el = this.compLayer.polyline(null, pxpoints, styles)
+    inframe_points = (p for p in pxpoints when ((p[0] >= 0) and (p[0] <= this.boxwidth) and (p[1] >= 0) and (p[1] <= this.boxheight)))
+    this.componentEls.push el
+    this.componentPoints.push inframe_points
+
+  setViewport: (viewport) ->
+    if viewport == null or viewport == undefined
+      viewport = this.init_viewport
+      viewbox = null
+      this.viewport = viewport
+    else
+      transviewbox = (vp, ivp, pxlen) ->
+        vp = arrsort(vp)
+        ivp = arrsort(ivp)
+        pxlen = Math.abs(pxlen)
+        return [(vp[0] - ivp[0]) / (ivp[1] - ivp[0]) * pxlen, (vp[1] - ivp[0]) / (ivp[1] - ivp[0]) * pxlen]
+      viewbox = (transviewbox(viewport[i], this.init_viewport[i], [this.boxwidth, this.boxheight][i]) for i in [0,1])
+      viewbox = [viewbox[0][0], viewbox[1][0], viewbox[0][1] - viewbox[0][0], viewbox[1][1] - viewbox[1][0]].join(",")
+      this.viewport = viewport
+    this.updateAxes()
+    # this.compLayer.configure({ "viewBox": viewbox })
+    this.createComponents()
+
+  setMouseMode: (mode) ->
+    this.mouseMode = mode
+    if this.mouseMode == "zoom"
+      this.root.css("cursor", "crosshair")
+    else if this.mouseMode == "drag"
+      this.root.css("cursor", "move")
+    else
+      this.root.css("cursor", "default")
+    if this.mouseMode != "curse"
+      this.decursePoint()
+
+  clearMouseObjects: (event) ->
+    if this.zoom_frame
+      this.zoom_frame.remove()
+      this.zoom_frame = null
+
+  onMouseDown: (event) ->
+    this.mouseDown = true
+    this.mouseDownTime2 = this.mouseDownTime
+    this.mouseDownTime = new Date().getTime()
+    this.mouseDownPos =
+      x: event.clientX - this.root.offset().left
+      y: event.clientY - this.root.offset().top
+    this.clearMouseObjects()
+    if this.mouseMode == "zoom"
+      if this.zoom_frame then this.zoom_frame.remove()
+      this.zoom_frame = $("<div></div>").appendTo(this.topLayer)
+        .addClass('axes-zoom-frame')
+        .css("width", 0)
+        .css("height", 0)
+        .css("position", "absolute")
+        .css("left", this.mouseDownPos.x)
+        .css("top", this.mouseDownPos.y)
+        .css("border-width", 1)
+        .css("border-color", "#999999")
+        .css("border-style", "solid")
+    if this.mouseMode == "drag"
+      this.mouseDownViewport = this.viewport
+    if this.mouseMode == "curse"
+      this.cursePoint(this.mouseDownPos)
+
+  onMouseUp: (event) ->
+    mouseDownBefore = this.mouseDown
+    this.mouseDown = false
+    eventtime = new Date().getTime()
+    eventpos = 
+      x: event.clientX - this.root.offset().left
+      y: event.clientY - this.root.offset().top
+    this.clearMouseObjects()
+    if this.mouseMode == "zoom" and mouseDownBefore
+      select_area = 
+        x1: this.mouseDownPos.x - this.boxleft
+        y1: this.mouseDownPos.y - this.boxtop
+        x2: eventpos.x - this.boxleft
+        y2: eventpos.y - this.boxtop
+      unless Math.abs(select_area.x2 - select_area.x1) < 2 and Math.abs(select_area.y2 - select_area.y1) < 2
+        norm_area = [
+          (l / this.boxwidth for l in arrsort([select_area.x1, select_area.x2])),
+          (l / this.boxheight for l in arrsort([select_area.y1, select_area.y2]))
+        ]
+        transviewport = (na, ivp, reversal) ->
+          if reversal
+            return (na[i] * (ivp[0] - ivp[1]) + ivp[1] for i in [0,1])
+          else
+            return (na[i] * (ivp[1] - ivp[0]) + ivp[0] for i in [0,1])
+        viewport = [
+          transviewport(norm_area[0], arrsort(this.viewport[0]), this.axes.xaxis.reversal),
+          transviewport(norm_area[1], arrsort(this.viewport[1]), not this.axes.yaxis.reversal)
+        ]
+        this.setViewport(viewport)
+    # Clicks
+    if eventtime - this.mouseDownTime < click_interval_threshold
+      this.onMouseClick(event)
+      if this.mouseDownTime - this.mouseDownTime2 < click_interval_threshold
+        this.onMouseDoubleClick(event)
+
+  onMouseClick: (event) ->
+    this
+
+  onMouseDoubleClick: (event) ->
+    if this.mouseMode == "zoom" then this.setViewport(null)
+    if this.mouseMode == "drag" then this.setViewport(null)
+
+  updateCoorlines: (eventpos) ->
+    if this.showMouseCoor
+      linestyle =
+        "stroke": "#333333"
+        "stroke-width": 0.25
+        "stroke-dasharray": "5,5"
+      unless this.xcoorline then this.xcoorline = this.coorlineLayer.line(0, eventpos.y, this.outwidth, eventpos.y, linestyle)
+      unless this.ycoorline then this.ycoorline = this.coorlineLayer.line(eventpos.x, 0, eventpos.x, this.outheight, linestyle)
+      this.coorlineLayer.change this.xcoorline, {
+        y1: eventpos.y
+        y2: eventpos.y
+      }
+      this.coorlineLayer.change this.ycoorline, {
+        x1: eventpos.x
+        x2: eventpos.x
+      }
+
+  cursePoint: (eventpos) ->
+    if this.mouseMode == "curse" and this.mouseDown
+      minpoint = null
+      mindist = null
+      for compPoints in this.componentPoints
+        for p in compPoints
+          d = Math.abs(p[0] - eventpos.x + this.boxleft) + Math.abs(p[1] - eventpos.y + this.boxtop)
+          if mindist == null or mindist > d
+            mindist = d
+            minpoint = p
+      if minpoint != null and mindist < 10
+        this.cursingPoint = minpoint
+        if this.cursingPointLabel then this.cursingPointLabel.remove()
+        if this.cursingPointPoint then this.cursingPointPoint.remove()
+        this.cursingPointPoint = $("<div></div>").appendTo(this.topLayer)
+          .addClass("axes-cursing-point-point")
+          .css("position", "absolute")
+          .css("left", this.cursingPoint[0] + this.boxleft - 3)
+          .css("top", this.cursingPoint[1] + this.boxtop - 3)
+          .css("width", 6)
+          .css("height", 6)
+          .css("border-width", 1)
+          .css("border-color", "white")
+          .css("border-style", "solid")
+          .css("background-color", "black")
+        this.cursingPointLabel = $("<div></div>").appendTo(this.topLayer)
+          .addClass("axes-cursing-point-label")
+          .css("position", "absolute")
+          .css("left", this.cursingPoint[0] + this.boxleft + 5)
+          .css("top", this.cursingPoint[1] + this.boxtop - 5 - 40)
+          .css("padding", 5)
+          .css("box-shadow", "0 0 5px #333333")
+          .css("font-size", 10)
+          .css("font-family", "sans-serif")
+          .css("line-height", 15 + "px")
+          .css("background-color", "white")
+          .css("height", 40)
+        $("<div></div>").css("white-space", "nowrap").text("x: " + this.cursingPoint.point[0]).appendTo(this.cursingPointLabel)
+        $("<div></div>").css("white-space", "nowrap").text("y: " + this.cursingPoint.point[1]).appendTo(this.cursingPointLabel)
+
+  decursePoint: () ->
+    this.cursingPoint = null
+    if this.cursingPointLabel
+      this.cursingPointLabel.remove()
+      this.cursingPointLabel = null
+    if this.cursingPointPoint
+      this.cursingPointPoint.remove()
+      this.cursingPointPoint = null
+
+  onMouseEnter: (event) ->
+    eventpos = 
+      x: event.clientX - this.root.offset().left
+      y: event.clientY - this.root.offset().top
+    if this.showMouseCoor then this.updateCoorlines(eventpos)
+
+  onMouseLeave: (event) ->
+    this.mouseDown = false
+    this.clearMouseObjects()
+    if this.xcoorline
+      this.coorlineLayer.remove(this.xcoorline)
+      this.xcoorline = null
+    if this.ycoorline
+      this.coorlineLayer.remove(this.ycoorline)
+      this.ycoorline = null
+
+  onMouseMove: (event) ->
+    eventpos = 
+      x: event.clientX - this.root.offset().left
+      y: event.clientY - this.root.offset().top
+    if this.showMouseCoor then this.updateCoorlines(eventpos)
+    if this.mouseMode == "zoom" and this.mouseDown
+      this.zoom_frame
+        .css("left", Math.min(eventpos.x, this.mouseDownPos.x))
+        .css("top", Math.min(eventpos.y, this.mouseDownPos.y))
+        .css("width", Math.abs(eventpos.x - this.mouseDownPos.x))
+        .css("height", Math.abs(eventpos.y - this.mouseDownPos.y))
+    if this.mouseMode == "drag" and this.mouseDown
+      deltapxx = eventpos.x - this.mouseDownPos.x
+      deltapxy = eventpos.y - this.mouseDownPos.y
+      trans = (deltapx, pxlen, vp, reversed) ->
+        vp = arrsort(vp)
+        if reversed
+          return deltapx / pxlen * (vp[0] - vp[1])
+        else
+          return deltapx / pxlen * (vp[1] - vp[0])
+      deltavpx = trans(deltapxx, this.boxwidth, this.mouseDownViewport[0], this.axes.xaxis.reversal)
+      deltavpy = trans(deltapxy, this.boxheight, this.mouseDownViewport[1], not this.axes.yaxis.reversal)
+      viewport = [
+        ((this.mouseDownViewport[0][i] - deltavpx) for i in [0,1]),
+        ((this.mouseDownViewport[1][i] - deltavpy) for i in [0,1])
+      ]
+      this.setViewport(viewport)
+    if this.mouseMode == "curse" and this.mouseDown
+      this.cursePoint(eventpos)
 
 
 

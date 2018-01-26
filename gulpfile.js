@@ -30,7 +30,7 @@ gulp.task('script', function() {
     .pipe(gulp.dest('public/javascripts'));
 });
 
-gulp.task('dist', function() {
+gulp.task('dist:script', function() {
   gulp.src('src/figure.coffee', { read: false })
     .pipe(browserify({
       transform: ['coffeeify'],
@@ -41,6 +41,14 @@ gulp.task('dist', function() {
     .pipe(gulp.dest('public/javascripts'));
 });
 
+gulp.task('dist:sass', function() {
+  return gulp.src('src/figure.scss')
+    .pipe(sass())
+    .pipe(gulp.dest('public/stylesheets'))
+});
+
+gulp.task('dist', ['dist:script', 'dist:sass']);
+
 gulp.task('default_config', function() {
   gulp.src('defaults.json')
     .pipe(gulp.dest('public'));
@@ -49,6 +57,7 @@ gulp.task('default_config', function() {
 gulp.task('watch', function() {
   gulp.watch('public/scss/**/*.scss', ['sass']);
   gulp.watch('public/coffeescripts/**/*.coffee', ['script']);
-  gulp.watch('src/**/*.coffee', ['dist']);
+  gulp.watch('src/**/*.coffee', ['dist:script']);
+  gulp.watch('src/**/*.scss', ['dist:sass']);
   gulp.watch('defaults.json', ['default_config']);
 });

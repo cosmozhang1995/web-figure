@@ -2,3 +2,28 @@
   width: 500px;
   height: 500px;
 }
+
+.figctrl {
+  display: inline-block;
+  font-size: 0;
+  vertical-align: top;
+  background-color: #cccccc;
+  border-radius: 4px;
+  border: 1px #666 solid;
+  margin-left: 30px;
+  .figctrl-item {
+    display: inline-block;
+    font-size: 16px;
+    line-height: 32px;
+    padding: 0 16px;
+    border-left: 1px #666 solid;
+    cursor: pointer;
+    &:first-child {
+      border: none;
+    }
+    &:hover,
+    &.active {
+      background-color: rgba(255, 255, 255, 0.5);
+    }
+  }
+}

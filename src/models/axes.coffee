@@ -59,6 +59,9 @@ module.exports = (rootConfig) ->
       this.visible = config.visible
       this.units = config.units
       # Viewports
+      #     Viewports is an array of 2D viewport vector
+      #     Each 2D viewport vector is viewport of a dimension
+      #     A 2D viewport vector is defined as [ lower_bound, upper_bound ]
       this.viewport = config.viewport
       this.default_viewport = config.default_viewport
       # Components

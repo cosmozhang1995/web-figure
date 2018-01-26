@@ -94,6 +94,29 @@ sprintf = () ->
     f = f.substring(m[0].length)
   return o.join('')
 
+
+class SciNumber
+  constructor: (bg, idx) ->
+    num = bg * Math.pow(10, with_default(idx, 0))
+    unit = 1
+    index = 0
+    # if num < 0.0000000000001 then num = 0
+    anum = Math.abs(num)
+    if anum > 0
+      while anum / unit >= 10
+        unit = unit * 10
+        index += 1
+      while anum / unit < 1
+        unit = unit * 0.1
+        index -= 1
+      anum = Math.floor(anum / unit)
+    num = if num > 0 then anum else -anum
+    this.num = num
+    this.unit = unit
+    this.index = index
+
+
+
 module.exports.with_default = with_default
 module.exports.extend = extend
 module.exports.isset = isset
