@@ -7,24 +7,24 @@ class Figure:
   def __init__(self, config=None):
     config = extend({}, defaults.figure, config)
     self.subplots = [Axes(sp) for sp in config["subplots"]]
-  def plot(self, *args, **kwargs)
+  def plot(self, *args, **kwargs):
     if len(self.subplots) == 0:
-      self.subplots.append(new Axes())
+      self.subplots.append(Axes())
     ax = self.subplots[-1]
-    apply(Axes.plot.apply, [ax] + args, kwargs)
+    apply(Axes.plot, [ax] + list(args), kwargs)
     return ax
   def dict(self):
     return {
       "subplots": todict(self.subplots)
     }
   def save_to(self, filepath):
-    f = open(filepath)
-    json.dump(f, self.dict(), indent=2)
+    f = open(filepath, "w")
+    json.dump(self.dict(), f, indent=2)
     f.close()
 
 class Axes:
   def __init__(self, config=None):
-    config = extend({}, defaults.figure, config)
+    config = extend({}, defaults.axes, config)
     # Appearance
     self.color = Color(config["color"])
     self.box_on = config["box_on"]
@@ -78,11 +78,11 @@ class Axes:
     if len(args) == 0:
       return
     elif len(args) == 1:
-      ydata = args[0]
+      ydata = list(args[0])
       xdata = range(1, len(ydata) + 1)
     else:
-      ydata = args[1]
-      xdata = args[0]
+      ydata = list(args[1])
+      xdata = list(args[0])
     named_args = parse_matlab_named_arguments(args[2:]) if (len(args) > 2) else {}
     axes_default = {
       "data": [[xdata[i], ydata[i]] for i in xrange(len(xdata))],
@@ -136,11 +136,11 @@ class Axes:
       "components": todict(self.components)
     }
 
-class Axis
+class Axis:
   def __init__(self, config=None):
     config = extend({}, defaults.axis, config)
     self.color = Color(config["color"])
-    self.reversal = config["reversal"] or false
+    self.reversal = config["reversal"] or False
     self.scale = config["scale"] or 'linear'
     self.lim = config["lim"] or 'auto'
   def dict(self):
@@ -151,7 +151,7 @@ class Axis
       "lim": todict(self.lim)
     }
 
-class Ticks
+class Ticks:
   def __init__(self, config=None):
     config = extend({}, defaults.ticks, config)
     self.ticks = config["ticks"]
@@ -170,7 +170,7 @@ class Ticks
       "dir": todict(self.dir)
     }
 
-class Grid
+class Grid:
   def __init__(self, config=None):
     config = extend({}, defaults.grid, config)
     self.on = config["on"]
@@ -185,7 +185,7 @@ class Grid
       "layer": todict(self.layer)
     }
 
-class Component
+class Component:
   def __init__(self, arg=None):
     if isinstance(arg, Line):
       self.type = "line"
@@ -215,7 +215,7 @@ class Component
       "component": todict(self.component)
     }
 
-class Line
+class Line:
   def __init__(self, config=None):
     config = extend({}, defaults.component_line, config)
     self.data = config["data"]
@@ -240,7 +240,7 @@ class Line
       "style": todict(self.style)
     }
 
-class Image
+class Image:
   def __init__(self, config=None):
     config = extend({}, defaults.component_image, config)
     self.data = config["data"]
@@ -255,7 +255,7 @@ class Image
       "channels": todict(self.channels)
     }
 
-class Shape
+class Shape:
   def __init__(self, config=None):
     config = extend({}, defaults.component_shape, config)
     self.data = config["data"]

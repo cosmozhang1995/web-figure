@@ -1,6 +1,6 @@
 import sys, os
 import json
-from utils import extend, defaults, with_default, parse_matlab_named_arguments, todict
+from utils import extend, defaults, with_default, parse_matlab_named_arguments, todict, pad_after
 
 class Color:
   def __init__(self, *arguments):
@@ -21,36 +21,35 @@ class Color:
       self.valid = clone.valid
     elif isinstance(arguments[0], list):
       # Color(rgba: [r, g, b, a])
-      rgba = arguments[0]
-      self.red = rgba[0] || defaults.color["red"]
-      self.green = rgba[1] || defaults.color["green"]
-      self.blue = rgba[2] || defaults.color["blue"]
-      self.alpha = rgba[3] || defaults.color["alpha"]
+      rgba = pad_after(arguments[0], 4)
+      self.red = rgba[0] or defaults.color["red"]
+      self.green = rgba[1] or defaults.color["green"]
+      self.blue = rgba[2] or defaults.color["blue"]
+      self.alpha = rgba[3] or defaults.color["alpha"]
       self.valid = (len(rgba) > 0)
     elif isinstance(arguments[0], dict):
       # Color(config: { red: number, green: number, blue: number, alpha: number })
       config = arguments[0]
-      self.red = config.red || defaults.color["red"]
-      self.green = config.green || defaults.color["green"]
-      self.blue = config.blue || defaults.color["blue"]
-      self.alpha = config.alpha || defaults.color["alpha"]
+      self.red = config.red or defaults.color["red"]
+      self.green = config.green or defaults.color["green"]
+      self.blue = config.blue or defaults.color["blue"]
+      self.alpha = config.alpha or defaults.color["alpha"]
       self.valid = True
-    elif isinstance(arguments[0], str):
+    elif isinstance(arguments[0], basestring):
       color_scheme = defaults.color["color_scheme"]
-      rgb = color_scheme[arguments[0]]
-      self.red = rgb[0] || defaults.color["red"]
-      self.green = rgb[1] || defaults.color["green"]
-      self.blue = rgb[2] || defaults.color["blue"]
+      rgb = pad_after(color_scheme[arguments[0]], 4)
+      self.red = rgb[0] or defaults.color["red"]
+      self.green = rgb[1] or defaults.color["green"]
+      self.blue = rgb[2] or defaults.color["blue"]
       self.alpha = defaults.color["alpha"]
       self.valid = True
     else:
       # Color(r: number, g: number, b: number, a: number)
-      arg = arguments || []
-      while len(arg) < 4: arg.append(None)
-      self.red = arg[0] || defaults.color["red"]
-      self.green = arg[1] || defaults.color["green"]
-      self.blue = arg[2] || defaults.color["blue"]
-      self.alpha = arg[3] || defaults.color["alpha"]
+      arg = pad_after(arguments or [], 4)
+      self.red = arg[0] or defaults.color["red"]
+      self.green = arg[1] or defaults.color["green"]
+      self.blue = arg[2] or defaults.color["blue"]
+      self.alpha = arg[3] or defaults.color["alpha"]
       self.valid = True
   
   def csscolor(self):
@@ -99,8 +98,8 @@ class Font:
     #   italic: boolean
     # })
     self.valid = (not arg is None)
-    arg = arg || {}
-    if isinstance(arg, str):
+    arg = arg or {}
+    if isinstance(arg, basestring):
       arg = {
         name: arg
       }
@@ -126,13 +125,13 @@ class Font:
       return None
 
 class Text:
-  def __init__(self):
-    self.valid = false
-    if typeof arguments[0] == "string":
+  def __init__(self, *arguments):
+    self.valid = False
+    if isinstance(arguments[0], basestring):
       # Text(text, font)
       self.text = arguments[0]
       self.font = Font(font)
-      self.valid = true
+      self.valid = True
     else:
       # Text({
       #   text: string

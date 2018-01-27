@@ -10,11 +10,11 @@ def extend(to, *args):
 
 class DefaultsConfig:
   def __init__(self, dictionary):
-    this.dictionary = dictionary
+    self.dictionary = dictionary
   def __getattr__(self, name):
     if name in self.dictionary:
-      return this.dictionary[name]
-    return super.__getattr__(self, name)
+      return self.dictionary[name]
+    return None
 
 def load_defaults(filepath = None):
   if filepath is None:
@@ -35,7 +35,7 @@ def parse_matlab_named_arguments(args):
   name = None
   d = {}
   for item in args:
-    if isinstance(name, str):
+    if isinstance(name, basestring):
       d[name] = item
       name = None
       continue
@@ -43,7 +43,7 @@ def parse_matlab_named_arguments(args):
   return d
 
 def todict(obj):
-  if isinstance(obj, str):
+  if isinstance(obj, basestring):
     return obj
   elif isinstance(obj, int):
     return obj
@@ -62,6 +62,16 @@ def todict(obj):
     return [todict(item) for item in obj]
   else:
     return obj.dict()
+
+def pad_after(arr, specified_length, elem=None):
+  remain = specified_length - len(arr)
+  if remain > 0:
+    if isinstance(arr, tuple):
+      return tuple(list(arr) + [elem for i in xrange(remain)])
+    else:
+      return arr + [elem for i in xrange(remain)]
+  else:
+    return arr
 
 
 defaults = load_defaults()
