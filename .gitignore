@@ -6,3 +6,5 @@ package-lock.json
 /public/javascripts
 /public/stylesheets
 /public/defaults.json
+
+*.pyc
