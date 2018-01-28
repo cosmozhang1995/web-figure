@@ -7,4 +7,4 @@ yy = np.sin(xx)
 fig = Figure()
 fig.plot(xx, yy)
 
-fig.save_to("fig.json")
+fig.save_to("../../public/image/webfig.json")

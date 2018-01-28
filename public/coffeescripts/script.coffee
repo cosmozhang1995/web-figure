@@ -1,9 +1,9 @@
-load_fig_url = window.location.protocol + ":/" + window.location.host + "/image/webfig.json"
+load_fig_url = window.location.protocol + "//" + window.location.host + "/image/webfig.json"
 
 load_fig = () ->
   $.get load_fig_url + "?t=" + new Date().getTime(), (data) ->
-    fig = new webfig.Figure(data)
-    window.figframe = new webfig.FigureFrame("#figframe", fig)
+    window.fig = new webfig.Figure(data)
+    window.figframe = new webfig.FigureFrame("#figframe", window.fig)
     window.figframe.createView()
     window.figframe.setAxesProperties("showMouseCoor", true)
 

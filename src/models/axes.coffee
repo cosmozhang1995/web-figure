@@ -14,7 +14,7 @@ module.exports = (rootConfig) ->
   class Figure
     constructor: (config) ->
       config = extend({}, defaults.figure, config)
-      this.subplots = config.subplots
+      this.subplots = (new Axes(sp) for sp in config.subplots)
 
     plot: () ->
       if this.subplots.length == 0
@@ -65,7 +65,7 @@ module.exports = (rootConfig) ->
       this.viewport = config.viewport
       this.default_viewport = config.default_viewport
       # Components
-      this.components = ((new Component(c)).component for c in config.components)
+      this.components = ((new Component(c)) for c in config.components)
 
     get_viewport: () ->
       return with_default(this.viewport, this.default_viewport)
@@ -146,14 +146,14 @@ module.exports = (rootConfig) ->
         this.type = "shape"
         this.component = arg
       else
-        config = extend({}, defaults.component, config)
+        config = extend({}, defaults.component, arg)
         this.type = config.type
         if this.type == "line"
-          this.component = new Line(config.config)
+          this.component = new Line(config.component)
         else if this.type == "image"
-          this.component = new Image(config.config)
+          this.component = new Image(config.component)
         else if this.type == "shape"
-          this.component = new Shape(config.config)
+          this.component = new Shape(config.component)
     viewport: () ->
       return this.component.viewport()
 

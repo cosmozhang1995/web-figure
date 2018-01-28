@@ -17,9 +17,9 @@ class Figure:
     return {
       "subplots": todict(self.subplots)
     }
-  def save_to(self, filepath):
+  def save_to(self, filepath, **kwargs):
     f = open(filepath, "w")
-    json.dump(self.dict(), f, indent=2)
+    json.dump(self.dict(), f, kwargs)
     f.close()
 
 class Axes:
@@ -64,7 +64,7 @@ class Axes:
     self.viewport = config["viewport"]
     self.default_viewport = config["default_viewport"]
     # Components
-    self.components = [Component(c).component for c in config["components"]]
+    self.components = [Component(c) for c in config["components"]]
 
   def get_viewport(self):
     return with_default(self.viewport, self.default_viewport)
